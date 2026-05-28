@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/thesouldev/goboxd/internal/api"
 )
 
 func main() {
 	http.HandleFunc("/healthz", healthzHandler)
-	
+	http.HandleFunc("/run", api.RunHandler)
+
 	fmt.Println("goboxd starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
