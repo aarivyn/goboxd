@@ -31,7 +31,8 @@ languages:
 
   - id: java
     name: Java
-    source_filename_strategy: from_request
+    source_filename: Main.java
+    artifact: Main
     build:
       cmd: /usr/bin/javac
       args: ["{{source}}"]
@@ -41,7 +42,7 @@ languages:
         max_processes: 100
     run:
       cmd: /usr/bin/java
-      args: ["{{artifact}}"]
+      args: ["-cp", ".", "Main"]
       limits:
         wall_time_s: 6
         memory_kb: 512000
@@ -88,7 +89,7 @@ languages:
         memory_kb: 524288
         max_processes: 64
 
-  - id: verilog
+  - id: verilog  
     name: Verilog
     source_filename: solution.v
     artifact: solution
@@ -100,8 +101,8 @@ languages:
         memory_kb: 1048576
         max_processes: 100
     run:
-      cmd: /usr/bin/vvp
-      args: ["{{artifact}}"]
+      cmd: /bin/bash
+      args: ["-c", "/usr/bin/vvp {{artifact}} | grep -v 'finish called'"]
       limits:
         wall_time_s: 5
         memory_kb: 204800
