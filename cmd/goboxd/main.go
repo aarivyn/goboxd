@@ -11,6 +11,7 @@ import (
 
 	"github.com/thesouldev/goboxd/internal/api"
 	"github.com/thesouldev/goboxd/internal/config"
+	"github.com/thesouldev/goboxd/internal/queue"
 )
 
 var cfg *config.Config
@@ -23,7 +24,10 @@ func main() {
 	}
 	fmt.Printf("loaded %d languages\n", len(cfg.Languages))
 
-	api.Init(cfg)
+	// Create job queue — limits concurrent jobs to number of CPUs
+	q := queue.New(runtime.NumCPU())
+
+	api.Init(cfg, q)
 
 	http.HandleFunc("/healthz", healthzHandler)
 	http.HandleFunc("/readyz", readyzHandler)
@@ -117,4 +121,4 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
-} 
+}

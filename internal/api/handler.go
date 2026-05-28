@@ -1,4 +1,4 @@
- package api
+package api
 
 import (
 	"encoding/json"
@@ -6,13 +6,16 @@ import (
 	"strings"
 
 	"github.com/thesouldev/goboxd/internal/config"
+	"github.com/thesouldev/goboxd/internal/queue"
 	"github.com/thesouldev/goboxd/internal/runner"
 )
 
 var cfg *config.Config
+var jobQueue *queue.Queue
 
-func Init(c *config.Config) {
+func Init(c *config.Config, q *queue.Queue) {
 	cfg = c
+	jobQueue = q
 }
 
 type Limits struct {
@@ -77,6 +80,30 @@ func validateFilename(name string) bool {
 	return true
 }
 
+func isFlagAllowed(flag string, allowlist []string) bool {
+	for _, pattern := range allowlist {
+		if strings.HasSuffix(pattern, "*") {
+			if strings.HasPrefix(flag, pattern[:len(pattern)-1]) {
+				return true
+			}
+		} else if flag == pattern {
+			return true
+		}
+	}
+	return false
+}
+
+func writeError(w http.ResponseWriter, code int, errCode, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": map[string]string{
+			"code":    errCode,
+			"message": msg,
+		},
+	})
+}
+
 func RunHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, 405, "method_not_allowed", "method not allowed")
@@ -117,7 +144,6 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate flags against allowlist
 	if len(req.Build.Flags) > 0 && len(lang.Build.FlagAllowlist) > 0 {
 		for _, flag := range req.Build.Flags {
 			if !isFlagAllowed(flag, lang.Build.FlagAllowlist) {
@@ -127,7 +153,6 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Build tests slice for runner
 	tests := make([]struct {
 		Stdin          string
 		ExpectedStdout string
@@ -137,12 +162,14 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		tests[i].ExpectedStdout = t.ExpectedStdout
 	}
 
-	jobResult := runner.RunJob(lang, req.Source, req.Build.Flags, tests)
+	// Run job through queue — waits if server is busy
+	var jobResult runner.JobResult
+	jobQueue.Run(func() {
+		jobResult = runner.RunJob(lang, req.Source, req.Build.Flags, tests)
+	})
 
-	// Build response
 	resp := RunResponse{}
 
-	// Handle build result
 	if jobResult.Build != nil {
 		status := "ok"
 		if jobResult.Build.ExitCode != 0 {
@@ -166,7 +193,6 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Process test results
 	overallStatus := "accepted"
 	for i, result := range jobResult.Tests {
 		got := strings.TrimRight(result.Stdout, "\n")
@@ -177,9 +203,7 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 			status = "runtime_error"
 		} else if got == expected {
 			status = "accepted"
-		} else if strings.EqualFold(
-			strings.TrimSpace(got),
-			strings.TrimSpace(expected)) {
+		} else if strings.EqualFold(strings.TrimSpace(got), strings.TrimSpace(expected)) {
 			status = "output_whitespace_mismatch"
 		} else {
 			status = "wrong_output"
@@ -200,28 +224,4 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 	resp.Status = overallStatus
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
-}
-
-func isFlagAllowed(flag string, allowlist []string) bool {
-	for _, pattern := range allowlist {
-		if strings.HasSuffix(pattern, "*") {
-			if strings.HasPrefix(flag, pattern[:len(pattern)-1]) {
-				return true
-			}
-		} else if flag == pattern {
-			return true
-		}
-	}
-	return false
-}
-
-func writeError(w http.ResponseWriter, code int, errCode, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"error": map[string]string{
-			"code":    errCode,
-			"message": msg,
-		},
-	})
 }
