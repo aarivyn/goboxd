@@ -23,7 +23,7 @@ languages:
         max_processes: 100
       flag_allowlist: ["-O0","-O1","-O2","-O3","-Wall","-Wextra","-std=c++17"]
     run:
-      cmd: "./{{artifact}}"
+      cmd: "{{artifact}}"
       limits:
         wall_time_s: 3
         memory_kb: 524288
@@ -82,7 +82,7 @@ languages:
         max_processes: 100
       flag_allowlist: ["-O0","-O1","-O2","-O3","-Wall","-std=c11"]
     run:
-      cmd: "./{{artifact}}"
+      cmd: "{{artifact}}"
       limits:
         wall_time_s: 3
         memory_kb: 524288

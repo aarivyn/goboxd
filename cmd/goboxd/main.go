@@ -1,4 +1,4 @@
-package main
+ package main
 
 import (
 	"encoding/json"
@@ -7,9 +7,21 @@ import (
 	"net/http"
 
 	"github.com/thesouldev/goboxd/internal/api"
+	"github.com/thesouldev/goboxd/internal/config"
 )
 
 func main() {
+	// Load languages config
+	cfg, err := config.Load("config/languages.yaml")
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+	fmt.Printf("loaded %d languages\n", len(cfg.Languages))
+
+	// Pass config to handler
+	api.Init(cfg)
+
+	// Register routes
 	http.HandleFunc("/healthz", healthzHandler)
 	http.HandleFunc("/run", api.RunHandler)
 
