@@ -1,19 +1,22 @@
-.PHONY: build run test integration lint
-
-COMPOSE ?= docker compose
-TOOLS   := $(COMPOSE) --profile tools run --rm tools
+.PHONY: build run test integration load lint
 
 build:
-	$(COMPOSE) build goboxd
+	go build -o goboxd ./cmd/goboxd
 
 run:
-	$(COMPOSE) up goboxd
+	docker compose up --build
 
 test:
-	$(TOOLS) go test ./...
+	go test ./...
 
 integration:
-	$(TOOLS) go test -tags=integration ./tests/...
+	go test ./tests/...
+
+load:
+	hey -n 1000 -c 50 -m POST \
+		-H "Content-Type: application/json" \
+		-d '{"language":"py3","source":"print(\"hello\")","tests":[{"stdin":"","expected_stdout":"hello"}]}' \
+		http://localhost:8080/run
 
 lint:
-	$(TOOLS) golangci-lint run ./...
+	go vet ./...
