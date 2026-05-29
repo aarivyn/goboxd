@@ -1,9 +1,12 @@
-package api
+ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/thesouldev/goboxd/internal/config"
 	"github.com/thesouldev/goboxd/internal/queue"
@@ -45,12 +48,11 @@ type RunRequest struct {
 }
 
 type TestResult struct {
-        Status      string `json:"status"`
-        Stdout      string `json:"stdout"`
-        Stderr      string `json:"stderr"`
-        DurationMs  int64  `json:"duration_ms"`
-        MemoryPeakKB int64 `json:"memory_peak_kb"`
-} 
+	Status     string `json:"status"`
+	Stdout     string `json:"stdout"`
+	Stderr     string `json:"stderr"`
+	DurationMs int64  `json:"duration_ms"`
+}
 
 type BuildResult struct {
 	Status     string `json:"status"`
@@ -97,7 +99,7 @@ func isFlagAllowed(flag string, allowlist []string) bool {
 func writeError(w http.ResponseWriter, code int, errCode, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"error": map[string]string{
 			"code":    errCode,
 			"message": msg,
@@ -111,6 +113,7 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Security: cap request body at 256KB
 	r.Body = http.MaxBytesReader(w, r.Body, 256*1024)
 
 	var req RunRequest
@@ -118,6 +121,12 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "bad_request", err.Error())
 		return
 	}
+
+	// Structured request log
+	requestID := fmt.Sprintf("%d", time.Now().UnixNano())
+	startTime := time.Now()
+	log.Printf(`{"request_id":"%s","language":"%s","event":"received"}`,
+		requestID, req.Language)
 
 	if req.Language == "" {
 		writeError(w, 400, "missing_language", "language is required")
@@ -129,6 +138,7 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Security: validate filenames — no path traversal
 	if !validateFilename(req.SourceFilename) {
 		writeError(w, 400, "invalid_filename", "source_filename must be a single path component")
 		return
@@ -145,6 +155,7 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Security: flag allowlist — no compiler flag injection
 	if len(req.Build.Flags) > 0 && len(lang.Build.FlagAllowlist) > 0 {
 		for _, flag := range req.Build.Flags {
 			if !isFlagAllowed(flag, lang.Build.FlagAllowlist) {
@@ -163,7 +174,7 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		tests[i].ExpectedStdout = t.ExpectedStdout
 	}
 
-	// Run job through queue — waits if server is busy
+	// Run through concurrency queue — waits if server is busy, never fails
 	var jobResult runner.JobResult
 	jobQueue.Run(func() {
 		jobResult = runner.RunJob(lang, req.Source, req.Build.Flags, tests)
@@ -189,6 +200,8 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 				resp.Tests[i] = TestResult{Status: "not_executed"}
 			}
 			w.Header().Set("Content-Type", "application/json")
+			log.Printf(`{"request_id":"%s","language":"%s","status":"build_failed","duration_ms":%d}`,
+				requestID, req.Language, time.Since(startTime).Milliseconds())
 			json.NewEncoder(w).Encode(resp)
 			return
 		}
@@ -223,6 +236,11 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp.Status = overallStatus
+
+	// Structured completion log
+	log.Printf(`{"request_id":"%s","language":"%s","status":"%s","duration_ms":%d}`,
+		requestID, req.Language, resp.Status, time.Since(startTime).Milliseconds())
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
