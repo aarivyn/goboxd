@@ -122,9 +122,9 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Structured request log
+	// Structured request log 
 	requestID := fmt.Sprintf("%d", time.Now().UnixNano())
-	startTime := time.Now()
+        startTime := time.Now()
 	log.Printf(`{"request_id":"%s","language":"%s","event":"received"}`,
 		requestID, req.Language)
 
@@ -175,6 +175,7 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Run through concurrency queue — waits if server is busy, never fails
+	
 	var jobResult runner.JobResult
 	jobQueue.Run(func() {
 		jobResult = runner.RunJob(lang, req.Source, req.Build.Flags, tests)
