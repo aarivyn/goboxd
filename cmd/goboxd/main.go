@@ -1,4 +1,4 @@
-package main
+ package main
 
 import (
 	"encoding/json"
@@ -24,9 +24,7 @@ func main() {
 	}
 	fmt.Printf("loaded %d languages\n", len(cfg.Languages))
 
-	// Create job queue — limits concurrent jobs to number of CPUs
 	q := queue.New(runtime.NumCPU())
-
 	api.Init(cfg, q)
 
 	http.HandleFunc("/healthz", healthzHandler)
@@ -59,27 +57,26 @@ func readyzHandler(w http.ResponseWriter, r *http.Request) {
 		Languages: make(map[string]LangStatus),
 	}
 
-	checks := map[string]string{
-		"py3":     "/usr/bin/python3",
-		"cpp":     "/usr/bin/g++",
-		"c":       "/usr/bin/gcc",
-		"java":    "/usr/bin/javac",
-		"bash":    "/bin/bash",
-		"js":      "/usr/bin/node",
-		"verilog": "/usr/bin/iverilog",
-	}
-
-	for id, path := range checks {
-		if _, err := os.Stat(path); err != nil {
-			resp.Languages[id] = LangStatus{OK: false, Error: path + " not found"}
+	// Dynamically check all languages from config
+	// No hardcoding - adding a language to yaml automatically shows here
+	for _, lang := range cfg.Languages {
+		cmd := lang.Run.Cmd
+		if lang.Build.Cmd != "" {
+			cmd = lang.Build.Cmd
+		}
+		if _, err := os.Stat(cmd); err != nil {
+			resp.Languages[lang.ID] = LangStatus{
+				OK:    false,
+				Error: cmd + " not found",
+			}
 			resp.Status = "degraded"
 		} else {
-			out, _ := exec.Command(path, "--version").CombinedOutput()
+			out, _ := exec.Command(cmd, "--version").CombinedOutput()
 			version := string(out)
 			if len(version) > 60 {
 				version = version[:60]
 			}
-			resp.Languages[id] = LangStatus{OK: true, Version: version}
+			resp.Languages[lang.ID] = LangStatus{OK: true, Version: version}
 		}
 	}
 
