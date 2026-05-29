@@ -1,10 +1,9 @@
-FROM ubuntu:24.04
+ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    golang-go \
     git \
     build-essential \
     libprotobuf-dev \
@@ -20,10 +19,18 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     iverilog \
     bash \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Go 1.22 manually
+RUN wget https://go.dev/dl/go1.22.3.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz && \
+    rm go1.22.3.linux-amd64.tar.gz
+
+ENV PATH=$PATH:/usr/local/go/bin
+
 # Build nsjail from source at tag 3.4
-RUN git clone --branch 3.4 --depth 1 \
+RUN git clone --depth 1 --branch 3.4 \
     https://github.com/google/nsjail /opt/nsjail && \
     cd /opt/nsjail && make && \
     cp nsjail /usr/sbin/nsjail && \
