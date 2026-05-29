@@ -45,11 +45,12 @@ type RunRequest struct {
 }
 
 type TestResult struct {
-	Status     string `json:"status"`
-	Stdout     string `json:"stdout"`
-	Stderr     string `json:"stderr"`
-	DurationMs int64  `json:"duration_ms"`
-}
+        Status      string `json:"status"`
+        Stdout      string `json:"stdout"`
+        Stderr      string `json:"stderr"`
+        DurationMs  int64  `json:"duration_ms"`
+        MemoryPeakKB int64 `json:"memory_peak_kb"`
+} 
 
 type BuildResult struct {
 	Status     string `json:"status"`
