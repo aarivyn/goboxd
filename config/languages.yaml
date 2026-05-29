@@ -107,4 +107,16 @@ languages:
         wall_time_s: 5
         memory_kb: 204800
         max_processes: 64
+
+  -  id: ruby
+     name: Ruby
+     source_filename: solution.rb
+     run:
+      cmd: /usr/bin/ruby
+      args: ["{{source}}"]
+      limits:
+        wall_time_s: 9
+        memory_kb: 204800
+        max_processes: 100 
+
         
