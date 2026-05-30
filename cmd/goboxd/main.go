@@ -1,4 +1,4 @@
- package main
+package main
 
 import (
 	"encoding/json"
@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
+	"strings"
+	"time"
 
 	"github.com/thesouldev/goboxd/internal/api"
 	"github.com/thesouldev/goboxd/internal/config"
@@ -16,7 +19,31 @@ import (
 
 var cfg *config.Config
 
+// sweepOrphans deletes leftover jail dirs from previous crashes
+func sweepOrphans() {
+	entries, err := os.ReadDir("/tmp")
+	if err != nil {
+		return
+	}
+	cutoff := time.Now().Add(-10 * time.Minute)
+	for _, e := range entries {
+		if !strings.HasPrefix(e.Name(), "job-") {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().Before(cutoff) {
+			os.RemoveAll(filepath.Join("/tmp", e.Name()))
+		}
+	}
+}
+
 func main() {
+	// Clean up stale jail directories from previous crashes
+	sweepOrphans()
+
 	var err error
 	cfg, err = config.Load("config/languages.yaml")
 	if err != nil {
@@ -57,8 +84,6 @@ func readyzHandler(w http.ResponseWriter, r *http.Request) {
 		Languages: make(map[string]LangStatus),
 	}
 
-	// Dynamically check all languages from config
-	// No hardcoding - adding a language to yaml automatically shows here
 	for _, lang := range cfg.Languages {
 		cmd := lang.Run.Cmd
 		if lang.Build.Cmd != "" {
