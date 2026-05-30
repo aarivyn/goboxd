@@ -20,6 +20,8 @@ RUN apt-get update && apt-get install -y \
     iverilog \
     bash \
     wget \
+    ruby \
+    lua5.4 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go 1.22 manually
