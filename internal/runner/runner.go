@@ -32,30 +32,35 @@ func replaceTemplate(s, source, artifact string) string {
 }
 
 func runCmd(cmd string, args []string, stdin string, dir string, timeLimitSec int) Result {
-nsjailArgs := []string{
-    "--mode", "o",
-    "--time_limit", fmt.Sprintf("%d", timeLimitSec),
-    "--rlimit_as", "512",
-    "--rlimit_nproc", "64",
-    "--rlimit_fsize", "32",
-    "--user", "65534",
-    "--group", "65534",
-    "--chroot", "/",
-    "--cwd", dir,
-    "--bindmount", dir + ":" + dir,
-    "--bindmount_ro", "/usr:/usr",
-    "--bindmount_ro", "/lib:/lib",
-    "--bindmount_ro", "/lib64:/lib64",
-    "--bindmount_ro", "/bin:/bin",
-    "--tmpfsmount", "/etc",
-    "--tmpfsmount", "/tmp",
-    "--disable_clone_newnet",
-    "--",
-    cmd,
-}
-	nsjailArgs = append(nsjailArgs, args...)
+	var c *exec.Cmd
 
-	c := exec.Command("/usr/sbin/nsjail", nsjailArgs...)
+	if _, err := os.Stat("/usr/sbin/nsjail"); err == nil {
+		nsjailArgs := []string{
+			"--mode", "o",
+			"--time_limit", fmt.Sprintf("%d", timeLimitSec),
+			"--rlimit_as", "2048",
+			"--rlimit_nproc", "64",
+			"--rlimit_fsize", "32",
+			"--user", "65534",
+			"--group", "65534",
+			"--chroot", "/",
+			"--cwd", dir,
+			"--bindmount", dir + ":" + dir,
+			"--bindmount_ro", "/usr:/usr",
+			"--bindmount_ro", "/lib:/lib",
+			"--bindmount_ro", "/lib64:/lib64",
+			"--bindmount_ro", "/bin:/bin",
+			"--disable_clone_newnet",
+			"--",
+			cmd,
+		}
+		nsjailArgs = append(nsjailArgs, args...)
+		c = exec.Command("/usr/sbin/nsjail", nsjailArgs...)
+	} else {
+		c = exec.Command(cmd, args...)
+	}
+
+	c.Dir = dir
 	c.Stdin = bytes.NewBufferString(stdin)
 
 	var outBuf, errBuf bytes.Buffer
@@ -92,7 +97,7 @@ func RunJob(lang *config.Language, source string, flags []string, tests []struct
 	Stdin          string
 	ExpectedStdout string
 }) JobResult {
-	jailDir, err := os.MkdirTemp("/var/tmp", "job-*")
+	jailDir, err := os.MkdirTemp("/tmp", "job-*")
 	if err != nil {
 		return JobResult{Build: &Result{Stderr: "failed to create temp dir", ExitCode: 1}}
 	}
@@ -123,12 +128,12 @@ func RunJob(lang *config.Language, source string, flags []string, tests []struct
 		}
 		args = append(args, flags...)
 
-		buildTimeLimit := lang.Build.TimeLimit
-		if buildTimeLimit <= 0 {
-			buildTimeLimit = 30
+		wallTime := lang.Build.Limits.WallTimeS
+		if wallTime <= 0 {
+			wallTime = 30
 		}
 
-		buildResult := runCmd(lang.Build.Cmd, args, "", jailDir, buildTimeLimit)
+		buildResult := runCmd(lang.Build.Cmd, args, "", jailDir, wallTime)
 		if buildResult.ExitCode != 0 {
 			return JobResult{Build: &buildResult}
 		}
@@ -149,9 +154,9 @@ func runTests(lang *config.Language, sourcePath, artifactPath, jailDir string, t
 }, buildResult *Result) JobResult {
 	job := JobResult{Build: buildResult}
 
-	runTimeLimit := lang.Run.TimeLimit
-	if runTimeLimit <= 0 {
-		runTimeLimit = 10
+	wallTime := lang.Run.Limits.WallTimeS
+	if wallTime <= 0 {
+		wallTime = 10
 	}
 
 	for _, test := range tests {
@@ -161,8 +166,7 @@ func runTests(lang *config.Language, sourcePath, artifactPath, jailDir string, t
 		}
 
 		cmd := replaceTemplate(lang.Run.Cmd, sourcePath, artifactPath)
-
-		result := runCmd(cmd, args, test.Stdin, jailDir, runTimeLimit)
+		result := runCmd(cmd, args, test.Stdin, jailDir, wallTime)
 		job.Tests = append(job.Tests, result)
 	}
 

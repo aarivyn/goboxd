@@ -40,15 +40,13 @@ languages:
     build:
       cmd: /usr/bin/javac
       args: ["{{source}}"]
-      time_limit: 30
       limits:
         wall_time_s: 30
         memory_kb: 512000
         max_processes: 100
     run:
-      cmd: /usr/bin/java
-      args: ["-cp", "{{artifact_dir}}", "Main"]
-      time_limit: 10
+      cmd: /bin/sh
+      args: ["-c", "cd $(dirname {{artifact}}) && /usr/bin/java Main"]
       limits:
         wall_time_s: 10
         memory_kb: 512000
