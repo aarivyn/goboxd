@@ -4,25 +4,23 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    git \
-    build-essential \
-    libprotobuf-dev \
-    protobuf-compiler \
-    libnl-route-3-dev \
-    pkg-config \
-    flex \
-    bison \
-    python3 \
-    gcc \
-    g++ \
-    default-jdk \
-    nodejs \
-    iverilog \
-    bash \
-    wget \
-    ruby \
-    lua5.4 \
+    git build-essential libprotobuf-dev protobuf-compiler \
+    libnl-route-3-dev pkg-config flex bison \
+    python3 gcc g++ default-jdk nodejs iverilog \
+    bash wget ruby lua5.4 \
+    rustc ocaml ocaml-findlib unzip \
     && rm -rf /var/lib/apt/lists/*
+
+RUN chmod 600 /etc/passwd /etc/shadow /etc/group
+    RUN wget -q https://go.dev/dl/go1.22.3.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz && \
+    rm go1.22.3.linux-amd64.tar.gz
+ENV PATH=$PATH:/usr/local/go/bin
+
+RUN wget -q https://github.com/JetBrains/kotlin/releases/download/v2.0.0/kotlin-compiler-2.0.0.zip && \
+    unzip -q kotlin-compiler-2.0.0.zip -d /usr/local && \
+    rm kotlin-compiler-2.0.0.zip
+ENV PATH=$PATH:/usr/local/kotlinc/bin
 
 # Install Go 1.22 manually
 RUN wget https://go.dev/dl/go1.22.3.linux-amd64.tar.gz && \

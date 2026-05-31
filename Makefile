@@ -4,7 +4,7 @@ build:
 	go build -o goboxd ./cmd/goboxd
 
 run:
-	docker compose up --build
+	docker-compose up --build
 
 test:
 	go test ./...

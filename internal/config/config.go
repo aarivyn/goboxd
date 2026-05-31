@@ -15,14 +15,16 @@ type Limits struct {
 type BuildConfig struct {
 	Cmd           string   `yaml:"cmd"`
 	Args          []string `yaml:"args"`
+	TimeLimit     int      `yaml:"time_limit"`
 	Limits        Limits   `yaml:"limits"`
 	FlagAllowlist []string `yaml:"flag_allowlist"`
 }
 
 type RunConfig struct {
-	Cmd    string   `yaml:"cmd"`
-	Args   []string `yaml:"args"`
-	Limits Limits   `yaml:"limits"`
+	Cmd       string   `yaml:"cmd"`
+	Args      []string `yaml:"args"`
+	TimeLimit int      `yaml:"time_limit"`
+	Limits    Limits   `yaml:"limits"`
 }
 
 type Language struct {

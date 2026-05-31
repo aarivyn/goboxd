@@ -5,6 +5,7 @@ languages:
     run:
       cmd: /usr/bin/python3
       args: ["{{source}}"]
+      time_limit: 10
       limits:
         wall_time_s: 9
         memory_kb: 102400
@@ -17,15 +18,18 @@ languages:
     build:
       cmd: /usr/bin/g++
       args: ["-o", "{{artifact}}", "{{source}}"]
+      time_limit: 30
       limits:
-        wall_time_s: 3
+        wall_time_s: 30
         memory_kb: 1048576
         max_processes: 100
       flag_allowlist: ["-O0","-O1","-O2","-O3","-Wall","-Wextra","-std=c++17"]
     run:
       cmd: "{{artifact}}"
+      args: []
+      time_limit: 10
       limits:
-        wall_time_s: 3
+        wall_time_s: 10
         memory_kb: 524288
         max_processes: 64
 
@@ -36,15 +40,17 @@ languages:
     build:
       cmd: /usr/bin/javac
       args: ["{{source}}"]
+      time_limit: 30
       limits:
-        wall_time_s: 6
+        wall_time_s: 30
         memory_kb: 512000
         max_processes: 100
     run:
       cmd: /usr/bin/java
-      args: ["-cp", ".", "Main"]
+      args: ["-cp", "{{artifact_dir}}", "Main"]
+      time_limit: 10
       limits:
-        wall_time_s: 6
+        wall_time_s: 10
         memory_kb: 512000
         max_processes: 100
 
@@ -54,6 +60,7 @@ languages:
     run:
       cmd: /bin/bash
       args: ["{{source}}"]
+      time_limit: 10
       limits:
         wall_time_s: 9
         memory_kb: 102400
@@ -65,6 +72,7 @@ languages:
     run:
       cmd: /usr/bin/node
       args: ["{{source}}"]
+      time_limit: 10
       limits:
         wall_time_s: 9
         memory_kb: 204800
@@ -77,47 +85,53 @@ languages:
     build:
       cmd: /usr/bin/gcc
       args: ["-o", "{{artifact}}", "{{source}}"]
+      time_limit: 30
       limits:
-        wall_time_s: 3
+        wall_time_s: 30
         memory_kb: 1048576
         max_processes: 100
       flag_allowlist: ["-O0","-O1","-O2","-O3","-Wall","-std=c11"]
     run:
       cmd: "{{artifact}}"
+      args: []
+      time_limit: 10
       limits:
-        wall_time_s: 3
+        wall_time_s: 10
         memory_kb: 524288
         max_processes: 64
 
-  - id: verilog  
+  - id: verilog
     name: Verilog
     source_filename: solution.v
     artifact: solution
     build:
       cmd: /usr/bin/iverilog
       args: ["-o", "{{artifact}}", "{{source}}"]
+      time_limit: 30
       limits:
-        wall_time_s: 5
+        wall_time_s: 30
         memory_kb: 1048576
         max_processes: 100
     run:
-      cmd: /bin/bash
-      args: ["-c", "/usr/bin/vvp {{artifact}} | grep -v 'finish called'"]
+      cmd: /usr/bin/vvp
+      args: ["{{artifact}}"]
+      time_limit: 10
       limits:
-        wall_time_s: 5
+        wall_time_s: 10
         memory_kb: 204800
         max_processes: 64
 
-  -  id: ruby
-     name: Ruby
-     source_filename: solution.rb
-     run:
+  - id: ruby
+    name: Ruby
+    source_filename: solution.rb
+    run:
       cmd: /usr/bin/ruby
       args: ["{{source}}"]
+      time_limit: 10
       limits:
         wall_time_s: 9
         memory_kb: 204800
-        max_p rocesses: 100 
+        max_processes: 100
 
   - id: lua
     name: Lua
@@ -125,9 +139,113 @@ languages:
     run:
       cmd: /usr/bin/lua5.4
       args: ["{{source}}"]
+      time_limit: 10
       limits:
         wall_time_s: 9
         memory_kb: 204800
-        max_processes: 100        
-        
-      
+        max_processes: 100
+
+  - id: rust
+    name: Rust
+    source_filename: solution.rs
+    artifact: solution
+    build:
+      cmd: /usr/bin/rustc
+      args: ["-o", "{{artifact}}", "{{source}}"]
+      time_limit: 60
+      limits:
+        wall_time_s: 60
+        memory_kb: 2097152
+        max_processes: 100
+    run:
+      cmd: "{{artifact}}"
+      args: []
+      time_limit: 10
+      limits:
+        wall_time_s: 10
+        memory_kb: 524288
+        max_processes: 64
+
+  - id: go
+    name: Go
+    source_filename: solution.go
+    artifact: solution
+    build:
+      cmd: /usr/local/go/bin/go
+      args: ["build", "-o", "{{artifact}}", "{{source}}"]
+      time_limit: 30
+      limits:
+        wall_time_s: 30
+        memory_kb: 1048576
+        max_processes: 100
+    run:
+      cmd: "{{artifact}}"
+      args: []
+      time_limit: 10
+      limits:
+        wall_time_s: 10
+        memory_kb: 524288
+        max_processes: 64
+
+  - id: kotlin
+    name: Kotlin
+    source_filename: solution.kt
+    artifact: solution.jar
+    build:
+      cmd: /usr/bin/kotlinc
+      args: ["{{source}}", "-include-runtime", "-d", "{{artifact}}"]
+      time_limit: 60
+      limits:
+        wall_time_s: 60
+        memory_kb: 2097152
+        max_processes: 100
+    run:
+      cmd: /usr/bin/java
+      args: ["-jar", "{{artifact}}"]
+      time_limit: 10
+      limits:
+        wall_time_s: 10
+        memory_kb: 512000
+        max_processes: 100
+
+  - id: ocaml
+    name: OCaml
+    source_filename: solution.ml
+    artifact: solution
+    build:
+      cmd: /usr/bin/ocamlfind
+      args: ["ocamlopt", "-package", "str", "-linkpkg", "-o", "{{artifact}}", "{{source}}"]
+      time_limit: 30
+      limits:
+        wall_time_s: 30
+        memory_kb: 1048576
+        max_processes: 100
+    run:
+      cmd: "{{artifact}}"
+      args: []
+      time_limit: 10
+      limits:
+        wall_time_s: 10
+        memory_kb: 524288
+        max_processes: 64
+
+  - id: swift
+    name: Swift
+    source_filename: solution.swift
+    artifact: solution
+    build:
+      cmd: /usr/bin/swiftc
+      args: ["-o", "{{artifact}}", "{{source}}"]
+      time_limit: 60
+      limits:
+        wall_time_s: 60
+        memory_kb: 2097152
+        max_processes: 100
+    run:
+      cmd: "{{artifact}}"
+      args: []
+      time_limit: 10
+      limits:
+        wall_time_s: 10
+        memory_kb: 524288
+        max_processes: 64
