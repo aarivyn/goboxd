@@ -30,3 +30,15 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+goboxd
+*.save
+*.swp
+AUDIT_REPORT.md
+CURL_TESTING_GUIDE.md
+test_endpoints.sh
+goboxd
+*.save
+*.swp
+AUDIT_REPORT.md
+CURL_TESTING_GUIDE.md
+test_endpoints.sh
