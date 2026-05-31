@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -243,5 +244,85 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		requestID, req.Language, resp.Status, time.Since(startTime).Milliseconds())
 
 	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+// LanguagesHandler handles both /languages (list all) and /languages/{id} (get one)
+func LanguagesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, 405, "method_not_allowed", "method not allowed")
+		return
+	}
+
+	// Parse the path to check if a specific language ID is requested
+	// /languages -> list all
+	// /languages/{id} -> get specific language
+	path := strings.TrimPrefix(r.URL.Path, "/languages")
+	path = strings.TrimPrefix(path, "/")
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if path == "" {
+		// List all languages
+		listLanguages(w, r)
+	} else {
+		// Get specific language detail
+		getLanguageDetail(w, r, path)
+	}
+}
+
+func listLanguages(w http.ResponseWriter, r *http.Request) {
+	type LanguageItem struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	type ListResponse struct {
+		Languages []LanguageItem `json:"languages"`
+	}
+
+	languages := make([]LanguageItem, 0, len(cfg.Languages))
+	for _, lang := range cfg.Languages {
+		languages = append(languages, LanguageItem{
+			ID:   lang.ID,
+			Name: lang.Name,
+		})
+	}
+
+	resp := ListResponse{Languages: languages}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
+}
+
+func getLanguageDetail(w http.ResponseWriter, r *http.Request, langID string) {
+	type DetailResponse struct {
+		ID       string `json:"id"`
+		Name     string `json:"name"`
+		Compiled bool   `json:"compiled"`
+		Extension string `json:"extension"`
+	}
+
+	lang := cfg.FindLanguage(langID)
+	if lang == nil {
+		writeError(w, 404, "not_found", "language not found: "+langID)
+		return
+	}
+
+	// Determine if compiled: has a Build command defined
+	compiled := lang.Build.Cmd != ""
+
+	// Extract file extension from SourceFilename
+	ext := filepath.Ext(lang.SourceFilename)
+	if ext == "" {
+		ext = ""
+	}
+
+	resp := DetailResponse{
+		ID:        lang.ID,
+		Name:      lang.Name,
+		Compiled:  compiled,
+		Extension: ext,
+	}
+
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }

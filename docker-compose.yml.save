@@ -1,0 +1,12 @@
+services:
+  goboxd:
+    build: .
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    cap_add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+

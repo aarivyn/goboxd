@@ -57,10 +57,16 @@ func main() {
 	http.HandleFunc("/healthz", healthzHandler)
 	http.HandleFunc("/readyz", readyzHandler)
 	http.HandleFunc("/info", infoHandler)
+	http.HandleFunc("/languages", api.LanguagesHandler)
+	http.HandleFunc("/languages/", api.LanguagesHandler)
 	http.HandleFunc("/run", api.RunHandler)
 
-	fmt.Println("goboxd starting on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	port := ":8080"
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		port = ":" + envPort
+	}
+	fmt.Println("goboxd starting on " + port)
+	log.Fatal(http.ListenAndServe(port, nil))
 }
 
 func healthzHandler(w http.ResponseWriter, r *http.Request) {
