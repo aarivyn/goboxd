@@ -15,6 +15,7 @@ import (
 	"github.com/thesouldev/goboxd/internal/api"
 	"github.com/thesouldev/goboxd/internal/config"
 	"github.com/thesouldev/goboxd/internal/queue"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var cfg *config.Config
@@ -60,6 +61,7 @@ func main() {
 	http.HandleFunc("/languages", api.LanguagesHandler)
 	http.HandleFunc("/languages/", api.LanguagesHandler)
 	http.HandleFunc("/run", api.RunHandler)
+	http.Handle("/metrics", promhttp.Handler())
 
 	port := ":8080"
 	if envPort := os.Getenv("PORT"); envPort != "" {
