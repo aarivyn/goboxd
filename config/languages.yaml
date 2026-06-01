@@ -148,7 +148,7 @@ languages:
     source_filename: solution.rs
     artifact: solution
     build:
-      cmd: /usr/bin/rustc
+      cmd: /home/godfather/.cargo/bin/rustc
       args: ["-o", "{{artifact}}", "{{source}}"]
       time_limit: 60
       limits:
@@ -169,7 +169,7 @@ languages:
     source_filename: solution.go
     artifact: solution
     build:
-      cmd: /usr/local/go/bin/go
+      cmd: /usr/bin/go
       args: ["build", "-o", "{{artifact}}", "{{source}}"]
       time_limit: 30
       limits:
