@@ -87,6 +87,11 @@ if c.ProcessState != nil {
 		if len(out) > 4*1024*1024 {
 			out = out[:4*1024*1024] + "\n[output truncated]"
 		}
+			// Cap stderr output too
+		err_str := errBuf.String()
+		if len(err_str) > 4*1024*1024 {
+			err_str = err_str[:4*1024*1024] + "\n[error output truncated]"
+		}
 		return Result{
 			Stdout:     out,
 			Stderr:     errBuf.String(),

@@ -1,4 +1,4 @@
-.PHONY: build run test integration load lint
+.PHONY: build run test integration load lint metrics
 
 build:
 	go build -o goboxd ./cmd/goboxd
@@ -20,3 +20,7 @@ load:
 
 lint:
 	go vet ./...
+
+metrics:
+	@echo "Prometheus metrics available at http://localhost:8080/metrics"
+	@curl -s http://localhost:8080/metrics | grep goboxd | head -20

@@ -152,3 +152,65 @@ func TestIntInvalidFilename(t *testing.T) {
 		t.Errorf("expected 400 got %d", resp.StatusCode)
 	}
 }
+func TestIntDisallowedFlag(t *testing.T) {
+	body, _ := json.Marshal(map[string]interface{}{
+		"language": "cpp",
+		"source": "#include<iostream>\nint main(){std::cout<<\"hello\";return 0;}",
+		"build": map[string]interface{}{
+			"flags": []string{"-nostdlib"},
+		},
+		"tests": []IntTestCase{{Stdin: "", ExpectedStdout: "hello"}},
+	})
+	resp, _ := http.Post(baseURL+"/run", "application/json", bytes.NewReader(body))
+	if resp.StatusCode != 400 {
+		t.Errorf("expected 400 for disallowed flag, got %d", resp.StatusCode)
+	}
+}
+
+func TestIntRequestSizeLimit(t *testing.T) {
+	hugeSource := string(make([]byte, 300*1024))
+	body, _ := json.Marshal(IntRunReq{
+		Language: "py3",
+		Source:   hugeSource,
+		Tests:    []IntTestCase{{Stdin: "", ExpectedStdout: ""}},
+	})
+	
+	resp, _ := http.Post(baseURL+"/run", "application/json", bytes.NewReader(body))
+	if resp.StatusCode != 413 {
+		t.Errorf("expected 413 for oversized request, got %d", resp.StatusCode)
+	}
+}
+
+func TestIntOutputTruncation(t *testing.T) {
+	source := `print("x" * (10 * 1024 * 1024))`
+	
+	body, _ := json.Marshal(IntRunReq{
+		Language: "py3",
+		Source:   source,
+		Tests:    []IntTestCase{{Stdin: "", ExpectedStdout: "x"}},
+	})
+	
+	resp, err := http.Post(baseURL+"/run", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	var result struct {
+		Status string `json:"status"`
+		Tests  []struct {
+			Stdout string `json:"stdout"`
+		} `json:"tests"`
+	}
+	json.NewDecoder(resp.Body).Decode(&result)
+	
+	if len(result.Tests) > 0 {
+		stdout := result.Tests[0].Stdout
+		if len(stdout) > 4*1024*1024 {
+			t.Errorf("expected truncated output (max 4 MiB), got %d bytes", len(stdout))
+		}
+		if !bytes.Contains([]byte(stdout), []byte("[output truncated]")) {
+			t.Error("expected truncation marker in output")
+		}
+	}
+}

@@ -239,7 +239,11 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	resp.Status = overallStatus
+		resp.Status = overallStatus
+
+	// Record metrics
+	durationMs := time.Since(startTime).Milliseconds()
+	RecordRequest(req.Language, resp.Status, durationMs)
 
 	// Structured completion log
 	log.Printf(`{"request_id":"%s","language":"%s","status":"%s","duration_ms":%d}`,
