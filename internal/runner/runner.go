@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"syscall"
 
 	"github.com/thesouldev/goboxd/internal/config"
 )
@@ -16,6 +17,7 @@ type Result struct {
 	Stderr     string
 	DurationMs int64
 	ExitCode   int
+	MemoryPeakKB int64
 }
 
 type JobResult struct {
@@ -69,6 +71,18 @@ func runDirect(cmd string, args []string, stdin string, dir string, wallTimeS in
 				exitCode = 1
 			}
 		}
+		// Get memory usage
+var memKB int64
+if c.ProcessState != nil {
+    var usage syscall.Rusage
+    if err := syscall.Getrusage(syscall.RUSAGE_CHILDREN, &usage); err == nil {
+        memKB = usage.Maxrss
+        // Linux reports in KB, macOS in bytes
+        if memKB > 1024*1024 {
+            memKB = memKB / 1024
+        }
+    }
+}
 		out := outBuf.String()
 		if len(out) > 4*1024*1024 {
 			out = out[:4*1024*1024] + "\n[output truncated]"
@@ -78,6 +92,7 @@ func runDirect(cmd string, args []string, stdin string, dir string, wallTimeS in
 			Stderr:     errBuf.String(),
 			DurationMs: duration,
 			ExitCode:   exitCode,
+			MemoryPeakKB: memKB,
 		}
 	}
 }

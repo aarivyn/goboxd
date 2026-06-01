@@ -53,6 +53,7 @@ type TestResult struct {
 	Stdout     string `json:"stdout"`
 	Stderr     string `json:"stderr"`
 	DurationMs int64  `json:"duration_ms"`
+	MemoryPeakKB int64 `json:"memory_peak_kb"`
 }
 
 type BuildResult struct {
@@ -234,6 +235,7 @@ func RunHandler(w http.ResponseWriter, r *http.Request) {
 			Stdout:     result.Stdout,
 			Stderr:     result.Stderr,
 			DurationMs: result.DurationMs,
+			MemoryPeakKB: result.MemoryPeakKB,
 		})
 	}
 
